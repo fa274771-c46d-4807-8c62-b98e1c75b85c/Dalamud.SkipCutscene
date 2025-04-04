@@ -36,7 +36,7 @@ jobs:
           Invoke-RestMethod https://goatcorp.github.io/dalamud-distrib/latest.zip `
             -Outfile /tmp/dalamud.zip
 
-          Extract-Archive /tmp/dalamud.zip `
+          Expand-Archive /tmp/dalamud.zip `
             -DestinationPath /tmp/dalamud
 
       - name: Build
