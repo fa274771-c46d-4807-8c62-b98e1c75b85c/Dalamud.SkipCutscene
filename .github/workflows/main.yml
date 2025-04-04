@@ -18,12 +18,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-    #  - name: Setup Nuget
-    #    uses: nuget/setup-nuget@v1
-    #    with:
-    #      nuget-version: latest
-    #  - name: Restore Nuget Packages
-    #    run: nuget restore SkipCutscene.sln
+      - name: Setup Nuget
+        uses: nuget/setup-nuget@v1
+        with:
+          nuget-version: latest
+
+      - name: Restore Nuget Packages
+        run: nuget restore SkipCutscene.sln
 
       - name: Build
         run: dotnet build 
