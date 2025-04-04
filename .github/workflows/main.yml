@@ -21,14 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # - name: Setup Nuget
-      #   uses: nuget/setup-nuget@v1
-      #   with:
-      #      nuget-version: latest
-
-      # - name: Restore Nuget Packages
-      #   run: nuget restore SkipCutscene.sln
-
       - name: Download dalamud 
         run: |
           New-Item `
@@ -45,18 +37,15 @@ jobs:
 
       - name: Build
         run: dotnet build 
-          $Env:GITHUB_WORKSPACE\SkipCutscene.sln 
+          $Env:GITHUB_WORKSPACE/SkipCutscene.sln 
           /p:Configuration=Pack
-
-      - name: debug
-        run: |
-          Write-Host 'event name is: ${{ github.event_name }}'
-          Write-Host 'event type is: ${{ github.event.action }}'
 
       - name: Publish
       #   if: ${{ github.event_name != 'pull_request' }}
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         run: |
-          cd ${{github.workspace}}
-          gh release upload ${{ github.event.release.tag_name }} feedmd-win-x64.zip        
+          Write-Host '${{ github.event.release.tag_name }}'
+          cd ${{github.workspace}}/SkipCutscene/bin/Pack/SkipCutscene
+          Get-ChildItem .
+          gh release upload '${{ github.event.release.tag_name }}' ./*
