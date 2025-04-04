@@ -19,7 +19,18 @@ jobs:
       DALAMUD_HOME: /tmp/dalamud
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3.2.0
+        with:
+          versionSpec: '6.*'
+
+      - name: Determine Version
+        id: versioning
+        uses: gittools/actions/gitversion/execute@v3.2.0
 
       - name: Download dalamud 
         run: |
@@ -47,4 +58,4 @@ jobs:
         run: |
           cd ${{github.workspace}}/SkipCutscene/bin/Pack/SkipCutscene
           $files = (Get-ChildItem .).Name
-          gh release upload '1.2.2.5' @files
+          gh release create '1.2.2.5' @files
