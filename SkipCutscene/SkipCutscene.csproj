@@ -7,7 +7,7 @@
 		<Platforms>x64;AnyCPU</Platforms>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 		<Configurations>Debug;Pack</Configurations>
-	</PropertyGroup>
+  </PropertyGroup>
 
   <Target Name="PackagePlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Pack'">
     <DalamudPackager 
