@@ -45,7 +45,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         run: |
-          Write-Host '${{ github.event.release.tag_name }}'
           cd ${{github.workspace}}/SkipCutscene/bin/Pack/SkipCutscene
-          Get-ChildItem .
-          gh release upload '${{ github.event.release.tag_name }}' ./*
+          $files = (Get-ChildItem .).Name
+          gh release upload '1.2.2.5' @files
