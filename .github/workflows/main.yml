@@ -31,21 +31,17 @@ jobs:
       - name: Restore Nuget Packages
         run: nuget restore SkipCutscene.sln
       - name: Build
-        run: |
-          dotnet build $Env:GITHUB_WORKSPACE\SkipCutscene.sln /p:Configuration=Release /p:DefineConstants=XL_NOAUTOUPDATE
-      # - name: Protect
-      #   run: |
-      #     cd "$Env:GITHUB_WORKSPACE"
-      #     .\Lib\.NET_Reactor\dotNET_Reactor.Console.exe -file ".\SkipCutscene\bin\Release\net7.0-windows\SkipCutscene.dll" -antitamp 1 -hide_calls 1 -control_flow_obfuscation 1 -flow_level 9 -resourceencryption 1 -exclusion_rules "^Plugins\.a08381\.SkipCutscene::types:^Config$"
-      #     Move-Item -Path .\SkipCutscene\bin\Release\net7.0-windows\SkipCutscene_Secure\* -Destination .\SkipCutscene\bin\Release\net7.0-windows -Force
-      #     Remove-Item -Path .\SkipCutscene\bin\Release\net7.0-windows\SkipCutscene_Secure -Force -Recurse -ErrorAction:Continue
+        run: dotnet build 
+          $Env:GITHUB_WORKSPACE\SkipCutscene.sln 
+          /p:Configuration=Release
+
       - name: Remove Useless
         run: |
           cd "$Env:GITHUB_WORKSPACE"
-          Remove-Item -Path .\SkipCutscene\bin\Release\net8.0-windows\SkipCutscene -Force -Recurse -ErrorAction:Continue
           Remove-Item -Path .\SkipCutscene\bin\Release\net8.0-windows\SkipCutscene.deps.json -Force -Recurse -ErrorAction:Continue
           Remove-Item -Path .\SkipCutscene\bin\Release\net8.0-windows\ref -Force -Recurse -ErrorAction:Continue
           mkdir -Path .\SkipCutscene\bin\Package\
+
       - name: Package
         uses: vimtor/action-zip@v1
         with:
