@@ -29,10 +29,10 @@ jobs:
       - name: Download dalamud 
         run: |
           New-Item `
-            -Path /tmp/
+            -Path /tmp/ `
             -ItemType Directory `
             -Force
-            
+
           Invoke-RestMethod https://goatcorp.github.io/dalamud-distrib/latest.zip `
             -Outfile /tmp/dalamud.zip
 
