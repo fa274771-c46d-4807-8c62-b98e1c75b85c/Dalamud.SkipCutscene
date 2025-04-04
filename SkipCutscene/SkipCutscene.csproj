@@ -6,15 +6,16 @@
 		<OutputType>Library</OutputType>
 		<Platforms>x64;AnyCPU</Platforms>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<Configurations>Debug;Pack</Configurations>
 	</PropertyGroup>
 
   <Target Name="PackagePlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Pack'">
-    <DalamudPackager
-            ProjectDir="$(ProjectDir)"
-            OutputPath="$(OutputPath)"
-            AssemblyName="$(AssemblyName)"
-            VersionComponents="3"
-            Exclude="$(AssemblyName).deps.json"
-            MakeZip="true"/>
+    <DalamudPackager 
+      ProjectDir="$(ProjectDir)" 
+      OutputPath="$(OutputPath)" 
+      AssemblyName="$(AssemblyName)" 
+      VersionComponents="3"
+      MakeZip="true"
+      Exclude="$(AssemblyName).deps.json" />
   </Target>
 </Project>
