@@ -50,7 +50,7 @@ jobs:
         run: dotnet build 
           $Env:GITHUB_WORKSPACE/SkipCutscene.sln 
           /p:Configuration=Pack
-          /p:AssemblyVersion=${{ GitVersion.AssemblySemVer }}
+          /p:AssemblyVersion=${{ steps.versioning.outputs.AssemblySemVer }}
 
       - name: Publish
       #   if: ${{ github.event_name != 'pull_request' }}
@@ -59,4 +59,4 @@ jobs:
         run: |
           cd ${{github.workspace}}/SkipCutscene/bin/Pack/SkipCutscene
           $files = (Get-ChildItem .).Name
-          gh release create #{{ GitVersion.MajorMinorPatch }} @files
+          gh release create #{{ steps.versioning.outputs.MajorMinorPatch }} @files
