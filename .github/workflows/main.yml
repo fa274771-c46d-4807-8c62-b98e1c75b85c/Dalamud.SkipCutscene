@@ -32,6 +32,13 @@ jobs:
         id: versioning
         uses: gittools/actions/gitversion/execute@v3.2.0
 
+      - name: debug
+        run: |
+          Write-Hots '${{ steps.versioning.outputs.assemblySemVer }}'
+          Write-Host '${{ steps.versioning.outputs.majorMinorPatch }}'
+          Write-Hots '${{ steps.versioning.outputs.AssemblySemVer }}'
+          Write-Host '${{ steps.versioning.outputs.MajorMinorPatch }}'
+
       - name: Download dalamud 
         run: |
           New-Item `
@@ -59,4 +66,9 @@ jobs:
         run: |
           cd ${{github.workspace}}/SkipCutscene/bin/Pack/SkipCutscene
           $files = (Get-ChildItem .).Name
-          gh release create #{{ steps.versioning.outputs.MajorMinorPatch }} @files
+          gh release create ${{ steps.versioning.outputs.MajorMinorPatch }} @files
+
+      - name: Tag
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          git tag ${{ steps.versioning.outputs.MajorMinorPatch }}
