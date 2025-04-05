@@ -53,7 +53,7 @@ jobs:
           /p:AssemblyVersion=${{ steps.versioning.outputs.AssemblySemVer }}
 
       - name: Publish
-      #   if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' }}
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         run: |
@@ -100,8 +100,6 @@ jobs:
           } `
           | ConvertTo-Json -AsArray `
           > ./repo.json
-
-          Write-Host (Invoke-RestMethod 'https://api.github.com/repos/${{ github.repository }}/releases')
 
           # Publish release
           $files = (Get-ChildItem .).Name
