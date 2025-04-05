@@ -87,6 +87,7 @@ jobs:
             DalamudApiLevel = ([Management.Automation.SemanticVersion]$sdk.Split('/')[-1]).Major
             ApplicableVersion = 'any'
             LastUpdate = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+            RepoUrl = $repoUrl
             DownloadLinkTesting = $downloadUrl
             DownloadLinkInstall = $downloadUrl
             DownloadLinkUpdate = $downloadUrl
@@ -100,8 +101,3 @@ jobs:
           # Publish release
           $files = (Get-ChildItem .).Name
           gh release create ${{ steps.versioning.outputs.MajorMinorPatch }} @files
-
-      - name: Tag
-        if: ${{ github.event_name == 'push' }}
-        run: |
-          git tag ${{ steps.versioning.outputs.MajorMinorPatch }}
