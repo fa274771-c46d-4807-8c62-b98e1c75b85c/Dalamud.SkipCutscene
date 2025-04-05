@@ -76,12 +76,16 @@ jobs:
 
           $manifest + [ordered]@{
             InternalName = 'SkipCutscene'
-            tags = @('utility')
-            RepoUrl = $repoUrl
+            AssemblyVersion = '${{ steps.versioning.outputs.MajorMinorPatch }}'
+            tags = @(
+              'utility'
+              'skip'
+              'msq'
+              'cutscene'
+              'scenario'
+            )
             DalamudApiLevel = ([Management.Automation.SemanticVersion]$sdk.Split('/')[-1]).Major
             ApplicableVersion = 'any'
-            IsHide = 'false'
-            IsTestingExclusive = 'false'
             LastUpdate = [DateTimeOffset]::Now.ToUnixTimeSeconds()
             DownloadLinkTesting = $downloadUrl
             DownloadLinkInstall = $downloadUrl
@@ -90,6 +94,8 @@ jobs:
           } `
           | ConvertTo-Json -AsArray `
           > ./repo.json
+
+          Write-Host (Invoke-RestMethod 'https://api.github.com/repos/${{ github.repository }}/releases')
 
           # Publish release
           $files = (Get-ChildItem .).Name
