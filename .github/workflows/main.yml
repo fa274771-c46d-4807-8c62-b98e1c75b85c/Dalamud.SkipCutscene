@@ -8,37 +8,99 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  release:
     runs-on: windows-latest
 
     defaults:
       run:
         shell: pwsh
 
-    steps:
-      - uses: actions/checkout@v2
+    env:
+      DALAMUD_HOME: /tmp/dalamud
 
-    #  - name: Setup Nuget
-    #    uses: nuget/setup-nuget@v1
-    #    with:
-    #      nuget-version: latest
-    #  - name: Restore Nuget Packages
-    #    run: nuget restore SkipCutscene.sln
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3.2.0
+        with:
+          versionSpec: '6.*'
+
+      - name: Determine Version
+        id: versioning
+        uses: gittools/actions/gitversion/execute@v3.2.0
+
+      - name: Download dalamud 
+        run: |
+          New-Item `
+            -Path /tmp/ `
+            -ItemType Directory `
+            -Force `
+            | Out-Null
+
+          Invoke-RestMethod https://goatcorp.github.io/dalamud-distrib/latest.zip `
+            -Outfile /tmp/dalamud.zip
+
+          Expand-Archive /tmp/dalamud.zip `
+            -DestinationPath /tmp/dalamud
 
       - name: Build
         run: dotnet build 
-          $Env:GITHUB_WORKSPACE\SkipCutscene.sln 
+          $Env:GITHUB_WORKSPACE/SkipCutscene.sln 
           /p:Configuration=Pack
+          /p:AssemblyVersion=${{ steps.versioning.outputs.AssemblySemVer }}
 
-      - name: debug
+      - name: Publish
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          GITHUB_TOKEN: ${{ github.TOKEN }}
         run: |
-          Write-Host 'event name is: ${{ github.event_name }}'
-          Write-Host 'event type is: ${{ github.event.action }}'
+          # Fetch required metadata
+          cd ${{github.workspace}}/SkipCutscene/
+          $sdk = (Select-Xml `
+            -Path .\SkipCutscene.csproj `
+            -XPath /Project `
+            ).Node.Sdk
 
-    #  - name: Publish
-    #    if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
-    #    env:
-    #      GITHUB_TOKEN: ${{ github.TOKEN }}
-    #    run: |
-    #      cd ${{github.workspace}}
-    #      gh release upload ${{ github.event.release.tag_name }} feedmd-win-x64.zip        
+          $manifest = [Management.Automation.OrderedHashtable](`
+            Get-Content `
+              ./SkipCutscene.json `
+              | ConvertFrom-Json -AsHashtable)
+
+          # Generate repository metadata
+          cd ./bin/Pack/SkipCutscene
+          $repoUrl = '${{ github.server_url }}/${{ github.repository }}'
+          $downloadUrl = "${repoUrl}/releases/latest/download/latest.zip"
+
+          $manifest + [ordered]@{
+            InternalName = 'SkipCutscene'
+            AssemblyVersion = '${{ steps.versioning.outputs.MajorMinorPatch }}'
+            tags = @(
+              'utility'
+              'skip'
+              'msq'
+              'cutscene'
+              'scenario'
+            )
+            DalamudApiLevel = ([Management.Automation.SemanticVersion]$sdk.Split('/')[-1]).Major
+            ApplicableVersion = 'any'
+            LastUpdate = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+            RepoUrl = $repoUrl
+            DownloadLinkTesting = $downloadUrl
+            DownloadLinkInstall = $downloadUrl
+            DownloadLinkUpdate = $downloadUrl
+            DownloadCount = ((Invoke-RestMethod `
+              '${{ github.api_url }}/repos/${{ github.repository }}/releases'
+              ).assets
+              | Where-Object { $_.name -eq 'latest.zip' }
+              | Measure-Object -Sum -Property download_count
+              ).Sum
+          } `
+          | ConvertTo-Json -AsArray `
+          > ./repo.json
+
+          # Publish release
+          $files = (Get-ChildItem .).Name
+          gh release create ${{ steps.versioning.outputs.MajorMinorPatch }} @files
