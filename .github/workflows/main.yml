@@ -57,7 +57,39 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         run: |
-          cd ${{github.workspace}}/SkipCutscene/bin/Pack/SkipCutscene
+          # Fetch required metadata
+          cd ${{github.workspace}}/SkipCutscene/
+          $sdk = (Select-Xml `
+            -Path .\SkipCutscene.csproj `
+            -XPath /Project `
+            ).Node.Sdk
+
+          $manifest = Get-Content `
+            ./SkipCutscene.json `
+            | ConvertFrom-Json -AsHashtable
+
+          # Generate repository metadata
+          cd ./bin/Pack/SkipCutscene
+          $repoUrl = '${{ github.server_url }}/${{ github.repository }}'
+          $downloadUrl = "${repoUrl}/releases/latest/download/latest.zip"
+
+          $manifest + @{
+            InternalName = 'SkipCutscene'
+            tags = @('utility')
+            RepoUrl = $repoUrl
+            DalamudApiLevel = ([Management.Automation.SemanticVersion]$sdk.Split('/')[-1]).Major
+            ApplicableVersion = 'any'
+            IsHide = 'false'
+            IsTestingExclusive = 'false'
+            LastUpdate = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+            DownloadLinkTesting = $downloadUrl
+            DownloadLinkInstall = $downloadUrl
+            DownloadLinkUpdate = $downloadUrl
+          } `
+          | ConvertTo-Json -AsArray `
+          > ./repo.json
+
+          # Publish release
           $files = (Get-ChildItem .).Name
           gh release create ${{ steps.versioning.outputs.MajorMinorPatch }} @files
 
