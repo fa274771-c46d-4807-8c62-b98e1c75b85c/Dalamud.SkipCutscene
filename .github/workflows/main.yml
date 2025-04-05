@@ -32,13 +32,6 @@ jobs:
         id: versioning
         uses: gittools/actions/gitversion/execute@v3.2.0
 
-      - name: debug
-        run: |
-          Write-Hots '${{ steps.versioning.outputs.assemblySemVer }}'
-          Write-Host '${{ steps.versioning.outputs.majorMinorPatch }}'
-          Write-Hots '${{ steps.versioning.outputs.AssemblySemVer }}'
-          Write-Host '${{ steps.versioning.outputs.MajorMinorPatch }}'
-
       - name: Download dalamud 
         run: |
           New-Item `
