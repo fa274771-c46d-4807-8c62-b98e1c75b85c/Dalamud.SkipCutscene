@@ -91,7 +91,12 @@ jobs:
             DownloadLinkTesting = $downloadUrl
             DownloadLinkInstall = $downloadUrl
             DownloadLinkUpdate = $downloadUrl
-            DownloadCount = 1
+            DownloadCount = ((Invoke-RestMethod `
+              '${{ github.api_url }}/repos/${{ github.repository }}/releases'
+              ).assets
+              | Where-Object { $_.name -eq 'latest.zip' }
+              | Measure-Object -Sum -Property download_count
+              ).Sum
           } `
           | ConvertTo-Json -AsArray `
           > ./repo.json
