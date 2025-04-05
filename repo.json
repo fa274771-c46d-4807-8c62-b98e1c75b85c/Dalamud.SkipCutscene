@@ -3,7 +3,7 @@
         "Author": "Windmourn",
 		"Name": "SkipCutscene",
 		"InternalName": "SkipCutscene",
-		"AssemblyVersion": "1.2.3.2",
+		"AssemblyVersion": "1.2.3",
 		"Punchline": "Help you skip cutscene from Duty Roulette: Main Scenario.",
 		"Description": "A plugin which could help you skip cutscene from Duty Roulette: Main Scenario.",
 		"RepoUrl": "https://github.com/fa274771-c46d-4807-8c62-b98e1c75b85c/Dalamud.SkipCutscene",
