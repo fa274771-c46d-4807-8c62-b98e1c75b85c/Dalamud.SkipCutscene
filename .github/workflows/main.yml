@@ -64,16 +64,17 @@ jobs:
             -XPath /Project `
             ).Node.Sdk
 
-          $manifest = Get-Content `
-            ./SkipCutscene.json `
-            | ConvertFrom-Json -AsHashtable
+          $manifest = [Management.Automation.OrderedHashtable](`
+            Get-Content `
+              ./SkipCutscene.json `
+              | ConvertFrom-Json -AsHashtable)
 
           # Generate repository metadata
           cd ./bin/Pack/SkipCutscene
           $repoUrl = '${{ github.server_url }}/${{ github.repository }}'
           $downloadUrl = "${repoUrl}/releases/latest/download/latest.zip"
 
-          $manifest + @{
+          $manifest + [ordered]@{
             InternalName = 'SkipCutscene'
             tags = @('utility')
             RepoUrl = $repoUrl
@@ -85,6 +86,7 @@ jobs:
             DownloadLinkTesting = $downloadUrl
             DownloadLinkInstall = $downloadUrl
             DownloadLinkUpdate = $downloadUrl
+            DownloadCount = 1
           } `
           | ConvertTo-Json -AsArray `
           > ./repo.json
