@@ -96,7 +96,7 @@ jobs:
               ).assets
               | Where-Object { $_.name -eq 'latest.zip' }
               | Measure-Object -Sum -Property download_count
-              ).Sum
+              ).Sum ?? 0
           } `
           | ConvertTo-Json -AsArray `
           > ./repo.json
