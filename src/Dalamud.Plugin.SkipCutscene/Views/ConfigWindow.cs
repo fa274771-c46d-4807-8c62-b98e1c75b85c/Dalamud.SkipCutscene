@@ -9,23 +9,47 @@ namespace Dalamud.Plugin.SkipCutscene.Views;
 internal class ConfigWindow(
     Config config,
     IReadOnlyDictionary<string, CommandInfo> commands
-    ) : Window($"{nameof(SkipCutscene)} configuration"), IDisposable
+    ) : Window(nameof(SkipCutscene), ImGuiWindowFlags.NoResize | ImGuiWindowFlags.AlwaysAutoResize), IDisposable
 {
+    private readonly Config Config = config;
+    private readonly IReadOnlyDictionary<string, CommandInfo> Commands = commands;
+
     public override void Draw()
     {
-        var command = config.Command;
-        var oldCommand = command;
-        //SkipCutscene.PluginLog.Logger.Information("{Command}, {OldCommand}", command, oldCommand);
+        bool save = false;
 
-        ImGui.InputText("Command to use?", ref command, 250, ImGuiInputTextFlags.CharsNoBlank);
-        if (command != oldCommand)
+        save &= DrawEnabled();
+
+        save &= DrawCommand();
+
+        if (save)
+        {
+            SkipCutscene.Interface.SavePluginConfig(Config);
+        }
+    }
+
+    private bool DrawEnabled()
+    {
+        var enabled = Config.IsEnabled;
+        return ImGui.Checkbox("Enabled", ref enabled);
+    }
+
+    private bool DrawCommand()
+    {
+        var command = Config.Command;
+        var oldCommand = command;
+        ImGui.SetNextItemWidth(50);
+        if (ImGui.InputText("Command to use?", ref command, 250, ImGuiInputTextFlags.CharsNoBlank) &&
+            !string.IsNullOrWhiteSpace(command) &&
+            (command != oldCommand))
         {
             SkipCutscene.CommandManager.RemoveHandler($"/{oldCommand}");
-            SkipCutscene.CommandManager.AddHandler($"/{command}", commands[nameof(SkipCutscene.SanityCheck)]);
+            SkipCutscene.CommandManager.AddHandler($"/{command}", Commands[nameof(SkipCutscene.SanityCheck)]);
 
-            config.Command = command;
-            SkipCutscene.Interface.SavePluginConfig(config);
+            Config.Command = command;
+            return true;
         }
+        return false;
     }
 
     public void Dispose()

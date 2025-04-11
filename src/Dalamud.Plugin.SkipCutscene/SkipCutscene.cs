@@ -68,12 +68,9 @@ public class SkipCutscene : IDalamudPlugin
             }
         };
         var ConfigWindow = new ConfigWindow(Config, Commands);
-        var MainWindow = new MainWindow(Config);
         WindowSystem.AddWindow(ConfigWindow);
-        WindowSystem.AddWindow(MainWindow);
 
         Interface.UiBuilder.Draw += WindowSystem.Draw;
-        Interface.UiBuilder.OpenMainUi += MainWindow.Toggle;
         Interface.UiBuilder.OpenConfigUi += ConfigWindow.Toggle;
 
         CommandManager.AddHandler($"/{Config.Command}", Commands[nameof(SanityCheck)]);
