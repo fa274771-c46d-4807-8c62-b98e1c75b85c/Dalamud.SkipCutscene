@@ -94,7 +94,7 @@ jobs:
       - name: Test
         run: |
           Write-Host (Get-Location)
-          ls
+          Get-ChildItem . -Recurse
 
 
       # - name: Publish
