@@ -66,21 +66,19 @@ jobs:
             -XPath /Project `
             ).Node.Sdk
 
-          $manifest = [Management.Automation.OrderedHashtable](`
-            Get-Content `
-              "./$projectName.json" `
-              | ConvertFrom-Json -AsHashtable)
-
           # Generate repository metadata
           cd "./bin/Pack/$projectName"
           $repoUrl = '${{ github.server_url }}/${{ github.repository }}'
           $downloadUrl = "${repoUrl}/releases/latest/download/latest.zip"
 
+          $manifest = [Management.Automation.OrderedHashtable](`
+            Get-Content `
+              "./$projectName.json" `
+              | ConvertFrom-Json -AsHashtable)
+
+          $manifest.AssemblyVersion = '${{ steps.versioning.outputs.MajorMinorPatch }}'
+
           $manifest + [ordered]@{
-            InternalName = 'SkipCutscene'
-            AssemblyVersion = '${{ steps.versioning.outputs.MajorMinorPatch }}'
-            DalamudApiLevel = ([Management.Automation.SemanticVersion]$sdk.Split('/')[-1]).Major
-            ApplicableVersion = 'any'
             LastUpdate = [DateTimeOffset]::Now.ToUnixTimeSeconds()
             RepoUrl = $repoUrl
             DownloadLinkTesting = $downloadUrl
@@ -99,7 +97,7 @@ jobs:
           # Publish release
           $files = (Get-ChildItem .).Name
 
-          $prerelease = ('steps.versioning.outputs.PreReleaseLabelWithDash') `
+          $prerelease = ('${{ steps.versioning.outputs.PreReleaseLabelWithDash }}') `
             ? @('-p') `
             : @()
 

@@ -1,9 +1,8 @@
 ﻿{
-    "name": "SkipCutscene",
-    "author": "Fish-Pudding",
-    "description": "Have you ever heard the definition of insanity? It's watching the same cutscene over and over, and expecting something different to happen. This plugin helps you to skip the insanity that is unskippable cutscenes.\nAll credits to the original author, Windmourn.",
-    "punchline": "Help you skip cutscene from Duty Roulette: Main Scenario.",
-    "tags": [
+    "Author": "Fish-Pudding",
+    "Name": "SkipCutscene",
+    "Description": "Have you ever heard the definition of insanity? It's watching the same cutscene over and over, and expecting something different to happen. This plugin helps you to skip the insanity that is unskippable cutscenes.\nAll credits to the original author, Windmourn.",
+    "Tags": [
         "utility",
         "skip",
         "msq",
