@@ -58,6 +58,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         run: |
           $projectName = 'Dalamud.Plugin.SkipCutscene'
+
           # Fetch required metadata
           cd "${{github.workspace}}/src/$projectName/"
           $sdk = (Select-Xml `
@@ -67,7 +68,7 @@ jobs:
 
           $manifest = [Management.Automation.OrderedHashtable](`
             Get-Content `
-              ./SkipCutscene.json `
+              "./$projectName.json" `
               | ConvertFrom-Json -AsHashtable)
 
           # Generate repository metadata
@@ -97,7 +98,7 @@ jobs:
 
           # Publish release
           $files = (Get-ChildItem .).Name
-          
+
           $prerelease = ('steps.versioning.outputs.PreReleaseLabelWithDash') `
             ? @('-p') `
             : @()
