@@ -61,7 +61,7 @@ jobs:
           # Fetch required metadata
           cd "${{github.workspace}}/src/$projectName/"
           $sdk = (Select-Xml `
-            -Path ".\$projectName" `
+            -Path ".\${projectName}.csproj" `
             -XPath /Project `
             ).Node.Sdk
 
@@ -97,4 +97,12 @@ jobs:
 
           # Publish release
           $files = (Get-ChildItem .).Name
-          gh release create ${{ steps.versioning.outputs.MajorMinorPatch }} @files
+          
+          $prerelease = ('steps.versioning.outputs.PreReleaseLabelWithDash') `
+            ? @('-p') `
+            : @()
+
+          gh release create `
+            '${{ steps.versioning.outputs.MajorMinorPatch }}${{ steps.versioning.outputs.PreReleaseLabelWithDash }}' `
+            @files `
+            @prerelease
