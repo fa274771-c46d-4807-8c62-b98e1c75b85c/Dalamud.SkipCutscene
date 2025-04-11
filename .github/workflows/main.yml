@@ -17,6 +17,7 @@ jobs:
 
     env:
       DALAMUD_HOME: /tmp/dalamud
+      ProjectName: Dalamud.Plugin.SkipCutscene
 
     steps:
       - uses: actions/checkout@v4
@@ -93,6 +94,7 @@ jobs:
 
       - name: Test
         run: |
+          Get-ChildItem env:
           Write-Host (Get-Location)
           Get-ChildItem . -Recurse
 
