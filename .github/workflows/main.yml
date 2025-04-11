@@ -17,6 +17,7 @@ jobs:
 
     env:
       DALAMUD_HOME: /tmp/dalamud
+      ProjectName: Dalamud.Plugin.SkipCutscene
 
     steps:
       - uses: actions/checkout@v4
@@ -52,28 +53,23 @@ jobs:
           /p:Configuration=Pack
           /p:AssemblyVersion=${{ steps.versioning.outputs.AssemblySemVer }}
 
-      - name: Publish
-        if: ${{ github.event_name != 'pull_request' }}
-        env:
-          GITHUB_TOKEN: ${{ github.TOKEN }}
+      - name: Set metadata
         run: |
-          $projectName = 'Dalamud.Plugin.SkipCutscene'
-
           # Fetch required metadata
-          cd "${{github.workspace}}/src/$projectName/"
+          cd "${{github.workspace}}/src/${env:ProjectName}/"
           $sdk = (Select-Xml `
-            -Path ".\${projectName}.csproj" `
+            -Path ".\${env:projectName}.csproj" `
             -XPath /Project `
             ).Node.Sdk
 
           # Generate repository metadata
-          cd "./bin/Pack/$projectName"
+          cd "./bin/Pack/${env:ProjectName}"
           $repoUrl = '${{ github.server_url }}/${{ github.repository }}'
           $downloadUrl = "${repoUrl}/releases/latest/download/latest.zip"
 
           $manifest = [Management.Automation.OrderedHashtable](`
             Get-Content `
-              "./$projectName.json" `
+              "./${env:ProjectName}.json" `
               | ConvertFrom-Json -AsHashtable)
 
           $manifest.AssemblyVersion = '${{ steps.versioning.outputs.MajorMinorPatch }}'
@@ -94,7 +90,14 @@ jobs:
           | ConvertTo-Json -AsArray `
           > ./repo.json
 
+      - name: Publish
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          GITHUB_TOKEN: ${{ github.TOKEN }}
+        run: |
           # Publish release
+          cd "${{ github.workspace }}/src/${env:ProjectName}/bin/Pack/${env:ProjectName}/"
+
           $files = (Get-ChildItem .).Name
 
           $prerelease = ('${{ steps.versioning.outputs.PreReleaseLabelWithDash }}') `
