@@ -52,10 +52,7 @@ jobs:
           /p:Configuration=Pack
           /p:AssemblyVersion=${{ steps.versioning.outputs.AssemblySemVer }}
 
-      - name: Publish
-        if: ${{ github.event_name != 'pull_request' }}
-        env:
-          GITHUB_TOKEN: ${{ github.TOKEN }}
+      - name: Set metadata
         run: |
           $projectName = 'Dalamud.Plugin.SkipCutscene'
 
@@ -94,14 +91,25 @@ jobs:
           | ConvertTo-Json -AsArray `
           > ./repo.json
 
-          # Publish release
-          $files = (Get-ChildItem .).Name
+      - name: Test
+        run: |
+          Write-Host (Get-Location)
+          ls
 
-          $prerelease = ('${{ steps.versioning.outputs.PreReleaseLabelWithDash }}') `
-            ? @('-p') `
-            : @()
 
-          gh release create `
-            '${{ steps.versioning.outputs.MajorMinorPatch }}${{ steps.versioning.outputs.PreReleaseLabelWithDash }}' `
-            @files `
-            @prerelease
+      # - name: Publish
+      #   if: ${{ github.event_name != 'pull_request' }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ github.TOKEN }}
+      #   run: |
+      #     # Publish release
+      #     $files = (Get-ChildItem .).Name
+
+      #     $prerelease = ('${{ steps.versioning.outputs.PreReleaseLabelWithDash }}') `
+      #       ? @('-p') `
+      #       : @()
+
+      #     gh release create `
+      #       '${{ steps.versioning.outputs.MajorMinorPatch }}${{ steps.versioning.outputs.PreReleaseLabelWithDash }}' `
+      #       @files `
+      #       @prerelease
