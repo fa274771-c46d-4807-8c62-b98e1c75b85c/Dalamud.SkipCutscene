@@ -57,33 +57,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         run: |
+          $projectName = 'Dalamud.Plugin.SkipCutscene'
+
           # Fetch required metadata
-          cd ${{github.workspace}}/SkipCutscene/
+          cd "${{github.workspace}}/src/$projectName/"
           $sdk = (Select-Xml `
-            -Path .\SkipCutscene.csproj `
+            -Path ".\${projectName}.csproj" `
             -XPath /Project `
             ).Node.Sdk
 
           $manifest = [Management.Automation.OrderedHashtable](`
             Get-Content `
-              ./SkipCutscene.json `
+              "./$projectName.json" `
               | ConvertFrom-Json -AsHashtable)
 
           # Generate repository metadata
-          cd ./bin/Pack/SkipCutscene
+          cd "./bin/Pack/$projectName"
           $repoUrl = '${{ github.server_url }}/${{ github.repository }}'
           $downloadUrl = "${repoUrl}/releases/latest/download/latest.zip"
 
           $manifest + [ordered]@{
             InternalName = 'SkipCutscene'
             AssemblyVersion = '${{ steps.versioning.outputs.MajorMinorPatch }}'
-            tags = @(
-              'utility'
-              'skip'
-              'msq'
-              'cutscene'
-              'scenario'
-            )
             DalamudApiLevel = ([Management.Automation.SemanticVersion]$sdk.Split('/')[-1]).Major
             ApplicableVersion = 'any'
             LastUpdate = [DateTimeOffset]::Now.ToUnixTimeSeconds()
@@ -103,4 +98,12 @@ jobs:
 
           # Publish release
           $files = (Get-ChildItem .).Name
-          gh release create ${{ steps.versioning.outputs.MajorMinorPatch }} @files
+
+          $prerelease = ('steps.versioning.outputs.PreReleaseLabelWithDash') `
+            ? @('-p') `
+            : @()
+
+          gh release create `
+            '${{ steps.versioning.outputs.MajorMinorPatch }}${{ steps.versioning.outputs.PreReleaseLabelWithDash }}' `
+            @files `
+            @prerelease
