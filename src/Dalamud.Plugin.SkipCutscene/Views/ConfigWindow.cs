@@ -31,7 +31,13 @@ internal class ConfigWindow(
     private bool DrawEnabled()
     {
         var enabled = Config.IsEnabled;
-        return ImGui.Checkbox("Enabled", ref enabled);
+        if (ImGui.Checkbox("Enabled", ref enabled) && 
+            (enabled != Config.IsEnabled))
+        {
+            Config.IsEnabled = enabled;
+            return true;
+        }
+        return false;
     }
 
     private bool DrawCommand()
