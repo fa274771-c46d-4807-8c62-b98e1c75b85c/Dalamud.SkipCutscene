@@ -48,7 +48,7 @@ jobs:
             $message = "Update to $sdk/$dalamudVersion"
             git checkout -b $branch
             git commit -a -m $message
-            git push --set-upstream origin feat/update
+            git push --set-upstream origin $branch
 
             $pullRequestUri = gh pr create --fill
             gh pr merge `
