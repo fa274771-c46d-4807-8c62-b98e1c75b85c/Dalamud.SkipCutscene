@@ -1,0 +1,52 @@
+name: CICD
+
+on:
+  schedule:
+  - cron: "0 17 * * *"
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      DALAMUD_HOME: /tmp/dalamud
+      ProjectName: Dalamud.Plugin.SkipCutscene
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compare Dalamud SDK version
+        run: |
+          $dalamudVersion = [Management.Automation.SemanticVersion](`
+            Invoke-RestMethod `
+              https://raw.githubusercontent.com/goatcorp/Dalamud.NET.Sdk/refs/heads/master/Dalamud.NET.Sdk/Sdk/SdkPackageVersions.props).`
+            Project.`
+            PropertyGroup.`
+            PackageVersion_Dalamud_NET_Sdk
+
+          $projectPath = "${env:GITHUB_WORKSPACE}/src/${env:ProjectName}/${env:ProjectName}.csproj"
+          $projectXml = [xml](Get-Content -Raw $projectPath)
+          $sdk, $currentVersion = $projectXml.Project.Sdk.Split('/')
+
+          if ($dalamudVersion -gt $currentVersion) {
+            $projectXml.Project.Sdk = [string]::join('/', $sdk, $dalamudVersion)
+            $projectXml.Save($projectPath)
+          }
+
+          if (git diff) {
+            $branch = "update/sdk-$dalamudVersion"
+            $message = "Update to $sdk/$dalamudVersion"
+            git checkout -b $branch
+            git commit -a -m $message
+            git push --set-upstream origin feat/update
+
+            $pullRequestUri = gh pr create --fill
+            gh pr merge --auto --squash $pullRequestUri
+          }
