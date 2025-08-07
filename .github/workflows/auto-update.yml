@@ -41,8 +41,11 @@ jobs:
           }
 
           if (git diff) {
-            git checkout -b "update/sdk-$dalamudVersion"
-            git commit -a -m "Update to $sdk/$dalamudVersion"
+            $branch = "update/sdk-$dalamudVersion"
+            $message = "Update to $sdk/$dalamudVersion"
+            git checkout -b $branch
+            git commit -a -m $message
+            git push --set-upstream origin feat/update
 
-            gh pr create
+            gh pr create --title $message
           }
