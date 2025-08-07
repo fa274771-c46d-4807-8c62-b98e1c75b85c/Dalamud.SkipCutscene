@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  release:
+  update:
     runs-on: windows-latest
 
     defaults:
