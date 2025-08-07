@@ -47,5 +47,6 @@ jobs:
             git commit -a -m $message
             git push --set-upstream origin feat/update
 
-            gh pr create --title $message
+            $pullRequestUri = gh pr create --fill
+            gh pr merge --auto --squash $pullRequestUri
           }
