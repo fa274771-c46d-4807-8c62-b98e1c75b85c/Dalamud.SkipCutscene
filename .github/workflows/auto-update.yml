@@ -1,10 +1,8 @@
 name: CICD
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  schedule:
+  - cron: "0 17 * * *"
   workflow_dispatch:
 
 jobs:
@@ -40,4 +38,11 @@ jobs:
           if ($dalamudVersion -gt $currentVersion) {
             $projectXml.Project.Sdk = [string]::join('/', $sdk, $dalamudVersion)
             $projectXml.Save($projectPath)
+          }
+
+          if (git diff) {
+            git checkout -b "update/sdk-$dalamudVersion"
+            git commit -a -m "Update to $sdk/$dalamudVersion"
+
+            gh pr create
           }
