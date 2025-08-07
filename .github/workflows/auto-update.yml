@@ -51,5 +51,9 @@ jobs:
             git push --set-upstream origin feat/update
 
             $pullRequestUri = gh pr create --fill
-            gh pr merge --auto --squash $pullRequestUri
+            gh pr merge `
+              --auto `
+              --squash `
+              --delete-branch `
+              $pullRequestUri
           }
