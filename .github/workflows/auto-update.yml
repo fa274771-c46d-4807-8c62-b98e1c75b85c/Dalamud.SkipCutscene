@@ -15,14 +15,19 @@ jobs:
 
     env:
       ProjectName: Dalamud.Plugin.SkipCutscene
-      GH_TOKEN: ${{ github.token }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/create-github-app-token@v2
+        id: generate-token
         with:
-          fetch-depth: 0
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
 
       - name: Compare Dalamud SDK version
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
           $dalamudVersion = [Management.Automation.SemanticVersion](`
             Invoke-RestMethod `
