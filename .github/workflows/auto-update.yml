@@ -22,7 +22,7 @@ jobs:
           Write-Host '${{ vars.APP_ID }}'
           Write-Host '${{ secrets.APP_PRIVATE_KEY }}'.Length
 
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@v1
         id: generate-token
         with:
           app-id: ${{ vars.APP_ID }}
