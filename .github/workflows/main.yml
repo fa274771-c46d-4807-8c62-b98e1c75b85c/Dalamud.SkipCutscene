@@ -46,7 +46,7 @@ jobs:
             -Force `
             | Out-Null
 
-          Invoke-RestMethod https://goatcorp.github.io/dalamud-distrib/latest.zip `
+          Invoke-RestMethod 'https://goatcorp.github.io/dalamud-distrib/stg/latest.zip' `
             -Outfile /tmp/dalamud.zip
 
           Expand-Archive /tmp/dalamud.zip `
