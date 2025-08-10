@@ -17,6 +17,11 @@ jobs:
       ProjectName: Dalamud.Plugin.SkipCutscene
 
     steps:
+      - name: test
+        run: |
+          Write-Host '${{ secrets.APP_ID }}'.Length
+          Write-Host '${{ secrets.APP_PRIVATE_KEY }}'.Length
+          
       - uses: actions/create-github-app-token@v2
         id: generate-token
         with:
