@@ -17,11 +17,6 @@ jobs:
       ProjectName: Dalamud.Plugin.SkipCutscene
 
     steps:
-      - name: test
-        run: |
-          Write-Host '${{ vars.APP_ID }}'
-          Write-Host '${{ secrets.APP_PRIVATE_KEY }}'.Length
-
       - uses: actions/create-github-app-token@v2
         id: generate-token
         with:
@@ -54,7 +49,7 @@ jobs:
             git config --global user.name 'fa274771-c46d-4807-8c62-b98e1c75b85c'
             git config --global user.email 'fa274771-c46d-4807-8c62-b98e1c75b85c@users.noreply.github.com'
 
-            $branch = "update/sdk-$dalamudVersion"
+            $branch = "update/dalamud-sdk-$dalamudVersion"
             $message = "Update to $sdk/$dalamudVersion"
             git checkout -b $branch
             git commit -a -m $message
