@@ -1,23 +1,22 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.Versioning;
 using Dalamud.Game;
 using Dalamud.Game.Command;
+using Dalamud.Hooking;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
-using Dalamud.Memory.Exceptions;
 using Dalamud.Plugin.Services;
+using Dalamud.Plugin.SkipCutscene.GameData;
 using Dalamud.Plugin.SkipCutscene.Views;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.Versioning;
 
 [assembly: SupportedOSPlatform("windows")]
 namespace Dalamud.Plugin.SkipCutscene;
 
 public class SkipCutscene : IDalamudPlugin
 {
-
-    internal Config Config { get; } = 
+    internal Config Config { get; } =
         (Interface.GetPluginConfig() is Config configuration)
             ? configuration
             : new();
@@ -34,6 +33,10 @@ public class SkipCutscene : IDalamudPlugin
 
     [PluginService]
     [NotNull]
+    public static IGameInteropProvider? InteropProvider { get; private set; }
+
+    [PluginService]
+    [NotNull]
     public static ICommandManager? CommandManager { get; private set; }
 
     [PluginService]
@@ -46,19 +49,51 @@ public class SkipCutscene : IDalamudPlugin
 
     public WindowSystem WindowSystem { get; } = new(nameof(SkipCutscene));
 
-    public CutsceneAddressResolver AddressResolver { get; } = new CutsceneAddressResolver();
-
-    public IReadOnlyDictionary<string, CommandInfo> Commands { get; }
+    public Hook<Hooks.CutsceneCreation> CutsceneCreationHook { get; }
 
     public SkipCutscene()
     {
-        if (!SetupScanner())
+        CutsceneCreationHook = SetupCutsceneCreationHook();
+        var commands = SetupCommands();
+        SetupWindowSystem(commands);
+    }
+
+    private Hook<Hooks.CutsceneCreation> SetupCutsceneCreationHook()
+    {
+        try
+        {
+            Hook<Hooks.CutsceneCreation> hook = null!; // We want the hook to refer to itself.
+            hook = Hooks.CreateCutsceneCreationHook(InteropProvider, (foo) =>
+            {
+                var shouldSkip = true; // todo
+                if (shouldSkip)
+                {
+                    PluginLog.Information("Skipping cutscene creation");
+                    return false;
+                }
+                return hook.Original.Invoke(foo); // always returns true
+            });
+            if (Config.IsEnabled)
+            {
+                hook.Enable();
+            }
+
+            PluginLog.Debug("Cutscene creation hook made.\n" +
+                $"\tAddress: {hook.Address:X}\n" +
+                $"\tEnabled: {hook.IsEnabled}");
+
+            return hook;
+        }
+        catch (Exception)
         {
             Dispose();
-            throw new MemoryReadException("Could not find cutscene offset addresses");
+            throw;
         }
+    }
 
-        Commands = new Dictionary<string, CommandInfo>()
+    private Dictionary<string, CommandInfo> SetupCommands()
+    {
+        var commands = new Dictionary<string, CommandInfo>()
         {
             {
                 nameof(SanityCheck), new(SanityCheck)
@@ -67,48 +102,27 @@ public class SkipCutscene : IDalamudPlugin
                 }
             }
         };
-        var ConfigWindow = new ConfigWindow(Config, Commands);
+        CommandManager.AddHandler($"/{Config.Command}", commands[nameof(SanityCheck)]);
+        return commands;
+    }
+
+    private void SetupWindowSystem(IReadOnlyDictionary<string, CommandInfo> commands)
+    {
+        var ConfigWindow = new ConfigWindow(Config, commands);
         WindowSystem.AddWindow(ConfigWindow);
 
         Interface.UiBuilder.Draw += WindowSystem.Draw;
         Interface.UiBuilder.OpenConfigUi += ConfigWindow.Toggle;
-
-        CommandManager.AddHandler($"/{Config.Command}", Commands[nameof(SanityCheck)]);
     }
 
     public void Dispose()
     {
-        SetEnabled(false);
         GC.SuppressFinalize(this);
-    }
 
-    private bool SetupScanner()
-    {
-        AddressResolver.Setup(SigScanner);
-
-        if (AddressResolver.Valid)
+        if (CutsceneCreationHook is { })
         {
-            PluginLog.Information("Cutscene Offset Found.");
-            SetEnabled(Config.IsEnabled);
-            return true;
-        }
-        PluginLog.Error("Cutscene Offset Not Found.");
-        PluginLog.Warning("Plugin Disabling...");
-        return false;
-    }
-
-    private void SetEnabled(bool isEnable)
-    {
-        if (!AddressResolver.Valid) return;
-        if (isEnable)
-        {
-            SafeMemory.Write<short>(AddressResolver.Offset1, -28528);
-            SafeMemory.Write<short>(AddressResolver.Offset2, -28528);
-        }
-        else
-        {
-            SafeMemory.Write<short>(AddressResolver.Offset1, 13173);
-            SafeMemory.Write<short>(AddressResolver.Offset2, 6260);
+            CutsceneCreationHook.Disable();
+            CutsceneCreationHook.Dispose();
         }
     }
 
@@ -121,29 +135,15 @@ public class SkipCutscene : IDalamudPlugin
             : $"1d100={dice + 50}, verdict = Sane");
 
         Config.IsEnabled = !Config.IsEnabled;
-        SetEnabled(Config.IsEnabled);
         Interface.SavePluginConfig(Config);
-    }
-}
 
-public class CutsceneAddressResolver : BaseAddressResolver
-{
-    public bool Valid => Offset1 != nint.Zero && Offset2 != nint.Zero;
-
-    public nint Offset1 { get; private set; }
-    public nint Offset2 { get; private set; }
-
-    protected override void Setup64Bit(ISigScanner sig)
-    {
-        Offset1 = sig.ScanText("75 33 48 8B 0D ?? ?? ?? ?? BA ?? 00 00 00 48 83 C1 10 E8 ?? ?? ?? ?? 83 78");
-        Offset2 = sig.ScanText("74 18 8B D7 48 8D 0D");
-        SkipCutscene.PluginLog.Information(
-            "Offset1: [\"ffxiv_dx11.exe\"+{0}]",
-            (Offset1.ToInt64() - Process.GetCurrentProcess().MainModule!.BaseAddress.ToInt64()).ToString("X")
-            );
-        SkipCutscene.PluginLog.Information(
-            "Offset2: [\"ffxiv_dx11.exe\"+{0}]",
-            (Offset2.ToInt64() - Process.GetCurrentProcess().MainModule!.BaseAddress.ToInt64()).ToString("X")
-            );
+        if (Config.IsEnabled)
+        {
+            CutsceneCreationHook.Enable();
+        }
+        else
+        {
+            CutsceneCreationHook.Disable();
+        }
     }
 }

@@ -1,14 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/13.0.0">
-  <PropertyGroup>
-    <OutputType>Library</OutputType>
-    <Platforms>x64;AnyCPU</Platforms>
-    <Configurations>Debug;Pack</Configurations>
-  </PropertyGroup>
-  <Target Name="PackagePlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Pack'">
-    <DalamudPackager ProjectDir="$(ProjectDir)" OutputPath="$(OutputPath)" AssemblyName="$(AssemblyName)" VersionComponents="3" MakeZip="true" Exclude="$(AssemblyName).deps.json" />
-  </Target>
-  <ItemGroup>
-    <Content Include="Dalamud.Plugin.SkipCutscene.json" />
-  </ItemGroup>
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<Platforms>x64;AnyCPU</Platforms>
+		<Configurations>Debug;Pack</Configurations>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+	<Target Name="PackagePlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Pack'">
+		<DalamudPackager ProjectDir="$(ProjectDir)" OutputPath="$(OutputPath)" AssemblyName="$(AssemblyName)" VersionComponents="3" MakeZip="true" Exclude="$(AssemblyName).deps.json" />
+	</Target>
+	<ItemGroup>
+		<Reference Include="FFXIVClientStructs">
+			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\FFXIVClientStructs.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+	<ItemGroup>
+		<Content Include="Dalamud.Plugin.SkipCutscene.json" />
+	</ItemGroup>
 </Project>
