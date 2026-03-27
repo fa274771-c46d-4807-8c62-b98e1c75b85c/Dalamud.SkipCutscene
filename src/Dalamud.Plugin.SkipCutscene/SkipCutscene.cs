@@ -6,6 +6,7 @@ using Dalamud.IoC;
 using Dalamud.Plugin.Services;
 using Dalamud.Plugin.SkipCutscene.GameData;
 using Dalamud.Plugin.SkipCutscene.Views;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -47,16 +48,42 @@ public class SkipCutscene : IDalamudPlugin
     [NotNull]
     public static IPluginLog? PluginLog { get; private set; }
 
+    [PluginService]
+    [NotNull]
+    public static IDutyState? DutyState { get; private set; }
+
+    [PluginService]
+    [NotNull]
+    public static IClientState? ClientState { get; private set; }
+
     public WindowSystem WindowSystem { get; } = new(nameof(SkipCutscene));
 
     public Hook<Hooks.CutsceneCreation> CutsceneCreationHook { get; }
+
+    private Territory CurrentTerritory { get; set; }
 
     public SkipCutscene()
     {
         CutsceneCreationHook = SetupCutsceneCreationHook();
         var commands = SetupCommands();
         SetupWindowSystem(commands);
+
+        ClientState.TerritoryChanged += TerritoryChanged;
     }
+
+    private void TerritoryChanged(ushort territory)
+    {
+        CurrentTerritory = (Territory)territory;
+        PluginLog.Debug("Switched to territory {Territory}", CurrentTerritory);
+    }
+
+    private Territory[] ToSkip { get; set; } = [
+        Territory.CastrumMeridianum, 
+        Territory.Praetorium, 
+        Territory.PortaDecumana];
+
+    private bool ShouldSkip => Config.IsEnabled 
+        && ToSkip.Contains((Territory)CurrentTerritory);
 
     private Hook<Hooks.CutsceneCreation> SetupCutsceneCreationHook()
     {
@@ -65,22 +92,19 @@ public class SkipCutscene : IDalamudPlugin
             Hook<Hooks.CutsceneCreation> hook = null!; // We want the hook to refer to itself.
             hook = Hooks.CreateCutsceneCreationHook(InteropProvider, (foo) =>
             {
-                var shouldSkip = true; // todo
-                if (shouldSkip)
+                if (ShouldSkip)
                 {
-                    PluginLog.Information("Skipping cutscene creation");
+                    PluginLog.Information($"Skipping cutscene creation in territory {CurrentTerritory}");
+                    ChatGui.Print($"Skipping cutscene creation");
+
                     return false;
                 }
-                return hook.Original.Invoke(foo); // always returns true
+                return hook.Original.Invoke(foo);
             });
-            if (Config.IsEnabled)
-            {
-                hook.Enable();
-            }
+            hook.Enable();
 
             PluginLog.Debug("Cutscene creation hook made.\n" +
-                $"\tAddress: {hook.Address:X}\n" +
-                $"\tEnabled: {hook.IsEnabled}");
+                $"\tAddress: {hook.Address:X}");
 
             return hook;
         }
@@ -124,6 +148,7 @@ public class SkipCutscene : IDalamudPlugin
             CutsceneCreationHook.Disable();
             CutsceneCreationHook.Dispose();
         }
+        ClientState.TerritoryChanged -= TerritoryChanged;
     }
 
     internal void SanityCheck(string command, string arguments)
