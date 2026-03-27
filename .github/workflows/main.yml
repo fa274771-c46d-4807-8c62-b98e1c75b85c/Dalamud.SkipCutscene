@@ -20,23 +20,23 @@ jobs:
       ProjectName: Dalamud.Plugin.SkipCutscene
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v3.2.0
+        uses: gittools/actions/gitversion/setup@v4
         with:
           versionSpec: '6.*'
 
       - name: Determine Version
         id: versioning
-        uses: gittools/actions/gitversion/execute@v3.2.0
+        uses: gittools/actions/gitversion/execute@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.x.x'
+          dotnet-version: '10'
 
       - name: Download dalamud 
         run: |
