@@ -7,20 +7,20 @@ using Dalamud.Bindings.ImGui;
 namespace Dalamud.Plugin.SkipCutscene.Views;
 
 internal class ConfigWindow(
-    Config config,
-    IReadOnlyDictionary<string, CommandInfo> commands
+    SkipCutscene parent
     ) : Window(nameof(SkipCutscene), ImGuiWindowFlags.NoResize | ImGuiWindowFlags.AlwaysAutoResize), IDisposable
 {
-    private readonly Config Config = config;
-    private readonly IReadOnlyDictionary<string, CommandInfo> Commands = commands;
+    private Config Config => parent.Config;
 
     public override void Draw()
     {
         bool save = false;
 
-        save &= DrawEnabled();
+        save |= DrawEnabled();
 
-        save &= DrawCommand();
+        save |= DrawAutoskip();
+
+        save |= DrawShowDtr();
 
         if (save)
         {
@@ -40,19 +40,23 @@ internal class ConfigWindow(
         return false;
     }
 
-    private bool DrawCommand()
+    private bool DrawAutoskip()
     {
-        var command = Config.Command;
-        var oldCommand = command;
-        ImGui.SetNextItemWidth(50);
-        if (ImGui.InputText("Command to use?", ref command, 250, ImGuiInputTextFlags.CharsNoBlank) &&
-            !string.IsNullOrWhiteSpace(command) &&
-            (command != oldCommand))
+        var enabled = Config.AutoSkipOnLightParty;
+        if (ImGui.Checkbox("Automatically skip when in a premade light party", ref enabled) && enabled != Config.AutoSkipOnLightParty)
         {
-            SkipCutscene.CommandManager.RemoveHandler($"/{oldCommand}");
-            SkipCutscene.CommandManager.AddHandler($"/{command}", Commands[nameof(SkipCutscene.SanityCheck)]);
+            Config.AutoSkipOnLightParty = enabled;
+            return true;
+        }
+        return false;
+    }
 
-            Config.Command = command;
+    private bool DrawShowDtr()
+    {
+        var enabled = Config.ShowInTopBar;
+        if (ImGui.Checkbox("Show in top bar", ref enabled) && enabled != Config.ShowInTopBar)
+        {
+            Config.ShowInTopBar = parent.DtrEntry.Shown = enabled;
             return true;
         }
         return false;

@@ -8,5 +8,7 @@ public class Config : IPluginConfiguration
 
     public bool IsEnabled { get; set; } = true;
 
-    public string Command { get ; set; } = "sc";
+    public bool AutoSkipOnLightParty { get; set; } = true;
+
+    public bool ShowInTopBar { get; set; } = true;
 }

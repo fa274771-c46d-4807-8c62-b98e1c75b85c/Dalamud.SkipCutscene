@@ -1,80 +1,56 @@
 using Dalamud.Game;
 using Dalamud.Game.Command;
+using Dalamud.Game.Gui.Dtr;
+using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin.Services;
+using Dalamud.Plugin.SkipCutscene.Extensions;
 using Dalamud.Plugin.SkipCutscene.GameData;
 using Dalamud.Plugin.SkipCutscene.Views;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.Versioning;
 
 [assembly: SupportedOSPlatform("windows")]
 namespace Dalamud.Plugin.SkipCutscene;
 
-public class SkipCutscene : IDalamudPlugin
+public partial class SkipCutscene
 {
     internal Config Config { get; } =
         (Interface.GetPluginConfig() is Config configuration)
             ? configuration
             : new();
 
-    private Random Rand { get; } = new();
+    private static Random Rand { get; } = new();
 
-    [PluginService]
-    [NotNull]
-    public static IDalamudPluginInterface? Interface { get; private set; }
+    public IDtrBarEntry DtrEntry { get; private set; }
 
-    [PluginService]
-    [NotNull]
-    public static ISigScanner? SigScanner { get; private set; }
-
-    [PluginService]
-    [NotNull]
-    public static IGameInteropProvider? InteropProvider { get; private set; }
-
-    [PluginService]
-    [NotNull]
-    public static ICommandManager? CommandManager { get; private set; }
-
-    [PluginService]
-    [NotNull]
-    public static IChatGui? ChatGui { get; private set; }
-
-    [PluginService]
-    [NotNull]
-    public static IPluginLog? PluginLog { get; private set; }
-
-    [PluginService]
-    [NotNull]
-    public static IDutyState? DutyState { get; private set; }
-
-    [PluginService]
-    [NotNull]
-    public static IClientState? ClientState { get; private set; }
+    internal ConfigWindow ConfigWindow { get; private set; }
 
     public WindowSystem WindowSystem { get; } = new(nameof(SkipCutscene));
 
     public Hook<Hooks.CutsceneCreation> CutsceneCreationHook { get; }
 
-    private Territory CurrentTerritory { get; set; }
+    private const string Command = "sc";
+
+    private static SeString Insane { get; } = new SeStringBuilder().AddUiGlow("Insane", 16).Build();
+    private static SeString Sane { get; } = new SeStringBuilder().AddUiGlow("Sane", 45).Build();
+
+    private const int LightPartyMemberCount = 4;
 
     public SkipCutscene()
     {
         CutsceneCreationHook = SetupCutsceneCreationHook();
-        var commands = SetupCommands();
-        SetupWindowSystem(commands);
-
-        ClientState.TerritoryChanged += TerritoryChanged;
-    }
-
-    private void TerritoryChanged(ushort territory)
-    {
-        CurrentTerritory = (Territory)territory;
-        PluginLog.Debug("Switched to territory {Territory}", CurrentTerritory);
+        SetupCommands();
+        SetupWindowSystem();
+        SetupDtrBarEntry();
+        Framework.Update += OnUpdate;
     }
 
     private Territory[] ToSkip { get; set; } = [
@@ -82,8 +58,24 @@ public class SkipCutscene : IDalamudPlugin
         Territory.Praetorium, 
         Territory.PortaDecumana];
 
-    private bool ShouldSkip => Config.IsEnabled 
-        && ToSkip.Contains((Territory)CurrentTerritory);
+    private bool PreviousWantsToSkip { get; set; }
+    private bool WantsToSkip => (Config.AutoSkipOnLightParty && PartyList.Count == LightPartyMemberCount) || Config.IsEnabled;
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+
+        CutsceneCreationHook.Disable();
+        CutsceneCreationHook.Dispose();
+
+        DtrEntry.Remove();
+
+        Interface.UiBuilder.Draw -= WindowSystem.Draw;
+        Interface.UiBuilder.OpenConfigUi -= ConfigWindow.Toggle;
+
+        Framework.Update -= OnUpdate;
+    }
+
 
     private Hook<Hooks.CutsceneCreation> SetupCutsceneCreationHook()
     {
@@ -92,9 +84,9 @@ public class SkipCutscene : IDalamudPlugin
             Hook<Hooks.CutsceneCreation> hook = null!; // We want the hook to refer to itself.
             hook = Hooks.CreateCutsceneCreationHook(InteropProvider, (foo) =>
             {
-                if (ShouldSkip)
+                if (WantsToSkip && ToSkip.Contains((Territory)ClientState.TerritoryType))
                 {
-                    PluginLog.Information($"Skipping cutscene creation in territory {CurrentTerritory}");
+                    PluginLog.Information($"Skipping cutscene creation in territory {(Territory)ClientState.TerritoryType}");
                     ChatGui.Print($"Skipping cutscene creation");
 
                     return false;
@@ -126,49 +118,72 @@ public class SkipCutscene : IDalamudPlugin
                 }
             }
         };
-        CommandManager.AddHandler($"/{Config.Command}", commands[nameof(SanityCheck)]);
+        CommandManager.AddHandler($"/{Command}", commands[nameof(SanityCheck)]);
         return commands;
     }
 
-    private void SetupWindowSystem(IReadOnlyDictionary<string, CommandInfo> commands)
+    [MemberNotNull(nameof(ConfigWindow))]
+    private void SetupWindowSystem()
     {
-        var ConfigWindow = new ConfigWindow(Config, commands);
+        ConfigWindow = new(this);
         WindowSystem.AddWindow(ConfigWindow);
 
         Interface.UiBuilder.Draw += WindowSystem.Draw;
         Interface.UiBuilder.OpenConfigUi += ConfigWindow.Toggle;
     }
 
-    public void Dispose()
+    [MemberNotNull(nameof(DtrEntry))]
+    private void SetupDtrBarEntry()
     {
-        GC.SuppressFinalize(this);
+        DtrEntry = DtrBar.Get(nameof(SkipCutscene));
+        DtrEntry.Shown = Config.ShowInTopBar;
+        SetDtrEntryText();
+        DtrEntry.OnClick = (e) => { 
+            switch (e)
+            {
+                case { ClickType: MouseClickType.Left }:
+                    SanityCheck(string.Empty, string.Empty);
+                    break;
+                case { ClickType: MouseClickType.Right }:
+                    ConfigWindow.Toggle();
+                    break;
+            }
+        };
+    }
 
-        if (CutsceneCreationHook is { })
+    private void OnUpdate(IFramework _)
+    {
+        if (PreviousWantsToSkip != WantsToSkip)
         {
-            CutsceneCreationHook.Disable();
-            CutsceneCreationHook.Dispose();
+            PreviousWantsToSkip = WantsToSkip;
+            SetDtrEntryText();
         }
-        ClientState.TerritoryChanged -= TerritoryChanged;
+    }
+
+    private void SetDtrEntryText()
+    {
+        DtrEntry.Text = new SeStringBuilder()
+            .AddIcon(BitmapFontIcon.WatchingCutscene)
+            .Add(WantsToSkip ? Sane : Insane)
+            .Build();
     }
 
     internal void SanityCheck(string command, string arguments)
     {
-        var dice = Rand.Next(50);
+        if (!string.IsNullOrEmpty(command))
+        {
+            if (!int.TryParse(arguments, out var diceSize))
+            {
+                diceSize = 100;
+            }
+            var dice = Rand.Next(diceSize / 2);
 
-        ChatGui.Print(Config.IsEnabled
-            ? $"1d100={dice}, verdict = Insane"
-            : $"1d100={dice + 50}, verdict = Sane");
+            ChatGui.Print(Config.IsEnabled
+                ? $"1d{diceSize}={dice}, verdict = {Insane}"
+                : $"1d{diceSize}={dice + (diceSize / 2)}, verdict = {Sane}");
+        }
 
         Config.IsEnabled = !Config.IsEnabled;
         Interface.SavePluginConfig(Config);
-
-        if (Config.IsEnabled)
-        {
-            CutsceneCreationHook.Enable();
-        }
-        else
-        {
-            CutsceneCreationHook.Disable();
-        }
     }
 }
